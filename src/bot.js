@@ -2,7 +2,7 @@ import { Bot, InlineKeyboard } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { config } from './config.js';
 import { repo } from './db.js';
-import { parseFilterUrl, resolveApiQuery } from './olx.js';
+import { parseFilterUrl, resolveApiQuery, currentProxy } from './olx.js';
 import { esc, formatPrice, timeAgo } from './notifier.js';
 import { state, backoffMinutes } from './checker.js';
 import { log } from './log.js';
@@ -197,6 +197,7 @@ export function createBot(checker) {
       `Last check: ${fmt(state.lastRunAt)}${state.running ? ' (running now)' : ''}`,
       `Next check: ${fmt(state.nextRunAt)}`,
       state.blockedStreak ? `🚫 Blocked by OLX, backing off ${backoffMinutes()} min` : '✅ Not blocked',
+      `Proxy: ${currentProxy() ?? 'none (direct)'}${config.proxyUrls.length > 1 ? ` (1 of ${config.proxyUrls.length} in rotation)` : ''}`,
     ];
     return reply(ctx, lines.join('\n'));
   });

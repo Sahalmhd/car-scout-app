@@ -3,6 +3,7 @@ import { createBot } from './bot.js';
 import { createNotifier } from './notifier.js';
 import { createChecker, startScheduler } from './checker.js';
 import { log } from './log.js';
+import { currentProxy } from './olx.js';
 
 if (!config.botToken) {
   log.error('BOT_TOKEN is missing. Copy .env.example to .env and fill it in.');
@@ -20,7 +21,7 @@ const bot = createBot({
 holder.checker = createChecker(createNotifier(bot));
 
 startScheduler(holder.checker.runCycle);
-if (config.proxyUrl) log.info(`OLX requests go through proxy ${new URL(config.proxyUrl).host}`);
+if (config.proxyUrls.length) log.info(`OLX requests go through ${config.proxyUrls.length} proxy(s), starting with ${currentProxy()}`);
 log.info(`Checking every ${config.checkIntervalMin} min (+0-${config.jitterMaxMin} min jitter)`);
 
 bot.start({ onStart: (me) => log.info(`Bot @${me.username} is running`) });

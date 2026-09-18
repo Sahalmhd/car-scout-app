@@ -107,7 +107,7 @@ You can also add a link with a name:
 | `DELAY_MIN_SEC` | 10 | Shortest pause between searches in one check |
 | `DELAY_MAX_SEC` | 30 | Longest pause between searches in one check |
 | `MAX_ALERTS_PER_RUN` | 15 | Most alerts sent for one search in one check |
-| `PROXY_URL` | – | Proxy for OLX requests (optional). Example: `http://user:pass@host:port` |
+| `PROXY_URL` | – | Proxies for OLX requests (optional), separated by commas. Example: `http://user:pass@host:port` |
 
 ## Keep it running
 
@@ -129,6 +129,15 @@ Add it to `.env`:
 ```
 PROXY_URL=http://username:password@proxy-host:port
 ```
+
+You can add many proxies, separated by commas:
+
+```
+PROXY_URL=http://user:pass@1.2.3.4:6754,http://user:pass@5.6.7.8:6755
+```
+
+If one proxy stops working or gets blocked, the bot moves to the next one by itself.
+`/status` shows which proxy is in use.
 
 - Only OLX requests use the proxy. Telegram does not.
 - Only HTTP proxies work (not SOCKS).

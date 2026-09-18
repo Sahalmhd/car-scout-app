@@ -1,6 +1,6 @@
 import { fetch, ProxyAgent } from 'undici';
 import { config } from './config.js';
-import { sleep, randomBetween } from './log.js';
+import { log, sleep, randomBetween } from './log.js';
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
@@ -9,8 +9,19 @@ const PAGE_SIZE = 100;
 const MAX_PAGES = 3;
 const TIMEOUT_MS = 25_000;
 
-// Only OLX traffic goes through the proxy; Telegram stays direct.
-const dispatcher = config.proxyUrl ? new ProxyAgent(config.proxyUrl) : undefined;
+// Only OLX traffic goes through the proxies; Telegram stays direct.
+// When one proxy fails or gets blocked we move on to the next.
+const proxies = config.proxyUrls.map((url) => ({ host: new URL(url).host, agent: new ProxyAgent(url) }));
+let proxyIndex = 0;
+
+export const currentProxy = () => proxies[proxyIndex]?.host ?? null;
+
+function nextProxy(reason) {
+  if (proxies.length < 2) return;
+  const from = currentProxy();
+  proxyIndex = (proxyIndex + 1) % proxies.length;
+  log.warn(`Proxy ${from} failed (${reason}), switching to ${currentProxy()}`);
+}
 
 export class BlockedError extends Error {}
 export class NetworkError extends Error {}
@@ -36,24 +47,35 @@ export function parseFilterUrl(input) {
 }
 
 async function request(url, accept, referer) {
-  let res;
-  try {
-    res = await fetch(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: accept,
-        'Accept-Language': 'en-IN,en;q=0.9',
-        Referer: referer,
-      },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      dispatcher,
-    });
-  } catch (err) {
-    throw new NetworkError(`${err.name}: ${err.cause?.message ?? err.message}`);
+  const attempts = Math.min(Math.max(proxies.length, 1), 3);
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: accept,
+          'Accept-Language': 'en-IN,en;q=0.9',
+          Referer: referer,
+        },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        dispatcher: proxies[proxyIndex]?.agent,
+      });
+    } catch (err) {
+      lastErr = new NetworkError(`${err.name}: ${err.cause?.message ?? err.message}`);
+      nextProxy(lastErr.message);
+      continue;
+    }
+    if ([403, 429, 503].includes(res.status)) {
+      lastErr = new BlockedError(`HTTP ${res.status}`);
+      nextProxy(lastErr.message);
+      continue;
+    }
+    if (!res.ok) throw new NetworkError(`HTTP ${res.status}`);
+    return res;
   }
-  if ([403, 429, 503].includes(res.status)) throw new BlockedError(`HTTP ${res.status}`);
-  if (!res.ok) throw new NetworkError(`HTTP ${res.status}`);
-  return res;
+  throw lastErr;
 }
 
 // OLX embeds the exact API query it derives from the filter URL in the page state,
@@ -63,7 +85,10 @@ export async function resolveApiQuery(filterUrl) {
   const html = await res.text();
   const match = html.match(/items#\\u002Fapi\\u002Frelevance\\u002Fv4\\u002Fsearch#([^"]+)"/);
   if (!match) {
-    if (/captcha|access denied/i.test(html)) throw new BlockedError('Captcha / access denied page');
+    if (/captcha|access denied/i.test(html)) {
+      nextProxy('captcha page');
+      throw new BlockedError('Captcha / access denied page');
+    }
     throw new ParseError('Search query not found in OLX page');
   }
   const params = new URLSearchParams(match[1].replace(/\\u0026/g, '&'));
@@ -82,6 +107,7 @@ export async function fetchListings(apiQuery, referer) {
     if (page > 0) await sleep(randomBetween(2000, 5000));
     const res = await request(`${API_BASE}?${apiQuery}&size=${PAGE_SIZE}&page=${page}`, 'application/json', referer);
     if (!(res.headers.get('content-type') ?? '').includes('json')) {
+      nextProxy('bot challenge');
       throw new BlockedError('Non-JSON response (likely a bot challenge)');
     }
     let body;
