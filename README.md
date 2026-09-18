@@ -3,6 +3,8 @@
 A Telegram bot that watches OLX car searches for you.
 When a new car is posted that matches your search, the bot sends you a message.
 
+Just want to use the bot? Read the **[User Guide](USER_GUIDE.md)**.
+
 ## What you need
 
 - Node.js 20.12 or newer
