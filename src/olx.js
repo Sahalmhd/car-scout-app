@@ -1,3 +1,5 @@
+import { fetch, ProxyAgent } from 'undici';
+import { config } from './config.js';
 import { sleep, randomBetween } from './log.js';
 
 const USER_AGENT =
@@ -6,6 +8,9 @@ const API_BASE = 'https://www.olx.in/api/relevance/v4/search';
 const PAGE_SIZE = 100;
 const MAX_PAGES = 3;
 const TIMEOUT_MS = 25_000;
+
+// Only OLX traffic goes through the proxy; Telegram stays direct.
+const dispatcher = config.proxyUrl ? new ProxyAgent(config.proxyUrl) : undefined;
 
 export class BlockedError extends Error {}
 export class NetworkError extends Error {}
@@ -41,9 +46,10 @@ async function request(url, accept, referer) {
         Referer: referer,
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),
+      dispatcher,
     });
   } catch (err) {
-    throw new NetworkError(`${err.name}: ${err.message}`);
+    throw new NetworkError(`${err.name}: ${err.cause?.message ?? err.message}`);
   }
   if ([403, 429, 503].includes(res.status)) throw new BlockedError(`HTTP ${res.status}`);
   if (!res.ok) throw new NetworkError(`HTTP ${res.status}`);

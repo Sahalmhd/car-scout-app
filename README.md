@@ -107,6 +107,7 @@ You can also add a link with a name:
 | `DELAY_MIN_SEC` | 10 | Shortest pause between searches in one check |
 | `DELAY_MAX_SEC` | 30 | Longest pause between searches in one check |
 | `MAX_ALERTS_PER_RUN` | 15 | Most alerts sent for one search in one check |
+| `PROXY_URL` | – | Proxy for OLX requests (optional). Example: `http://user:pass@host:port` |
 
 ## Keep it running
 
@@ -118,6 +119,22 @@ npx pm2 start ecosystem.config.cjs
 npx pm2 logs car-scout     # see logs
 npx pm2 stop car-scout     # stop
 ```
+
+## Using a proxy
+
+OLX blocks many cloud servers. If the bot works on your computer but not on a server, use an **Indian residential proxy**.
+
+Add it to `.env`:
+
+```
+PROXY_URL=http://username:password@proxy-host:port
+```
+
+- Only OLX requests use the proxy. Telegram does not.
+- Only HTTP proxies work (not SOCKS).
+- If your password has special characters like `@` or `:`, write them as `%40` and `%3A`.
+
+Restart the bot after changing `.env`.
 
 ## Test an OLX link
 

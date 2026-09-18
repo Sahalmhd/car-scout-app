@@ -18,5 +18,6 @@ export const config = {
   delayMinSec: int('DELAY_MIN_SEC', 10),
   delayMaxSec: int('DELAY_MAX_SEC', 30),
   maxAlertsPerRun: int('MAX_ALERTS_PER_RUN', 15),
+  proxyUrl: process.env.PROXY_URL?.trim() || '',
   dbPath: process.env.DB_PATH ?? new URL('../data/cars.db', import.meta.url).pathname,
 };

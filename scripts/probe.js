@@ -1,5 +1,6 @@
 import { parseFilterUrl, resolveApiQuery, fetchListings, parseItem, matchesScope } from '../src/olx.js';
 import { sleep } from '../src/log.js';
+import { config } from '../src/config.js';
 
 const input = process.argv[2];
 const runs = parseInt(process.argv[3] ?? '3', 10);
@@ -9,6 +10,7 @@ if (!parsed) {
   process.exit(1);
 }
 
+if (config.proxyUrl) console.log(`Using proxy ${new URL(config.proxyUrl).host}`);
 console.log(`Location: ${parsed.locationName} (${parsed.locationId ?? 'none'}), category ${parsed.categoryId}`);
 const t0 = Date.now();
 const query = await resolveApiQuery(parsed.url);

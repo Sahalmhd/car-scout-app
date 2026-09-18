@@ -20,6 +20,7 @@ const bot = createBot({
 holder.checker = createChecker(createNotifier(bot));
 
 startScheduler(holder.checker.runCycle);
+if (config.proxyUrl) log.info(`OLX requests go through proxy ${new URL(config.proxyUrl).host}`);
 log.info(`Checking every ${config.checkIntervalMin} min (+0-${config.jitterMaxMin} min jitter)`);
 
 bot.start({ onStart: (me) => log.info(`Bot @${me.username} is running`) });
