@@ -17,6 +17,7 @@ const holder = {};
 const bot = createBot({
   runCycle: (...a) => holder.checker.runCycle(...a),
   checkFilter: (...a) => holder.checker.checkFilter(...a),
+  sendPending: (...a) => holder.checker.sendPending(...a),
 });
 holder.checker = createChecker(createNotifier(bot));
 

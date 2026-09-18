@@ -20,6 +20,7 @@ const HELP = `<b>OLX Car Alerts</b>
 /scope &lt;id&gt; city|nearby – only the chosen city, or nearby districts too
 /pause &lt;id&gt; · /resume &lt;id&gt;
 /remove &lt;id&gt; – stop tracking
+/reset &lt;id&gt; [n] – send the newest n cars again (test alerts)
 /check – check OLX right now
 /status – health of the checker`;
 
@@ -176,6 +177,17 @@ export function createBot(checker) {
     await ctx.editMessageText(ok ? `🗑 Removed #${ctx.match[1]}.` : 'Already removed.');
   });
 
+  bot.command('reset', async (ctx) => {
+    const [idStr, nStr] = String(ctx.match ?? '').trim().split(/\s+/);
+    const filter = repo.getFilter(parseInt(idStr, 10), ctx.chat.id);
+    if (!filter) return reply(ctx, 'Send: /reset &lt;id&gt; [n]. See ids with /list');
+    const n = Math.min(Math.max(parseInt(nStr, 10) || 5, 1), config.maxAlertsPerRun);
+    const count = repo.resendNewest(filter.id, n);
+    if (!count) return reply(ctx, 'No cars saved for this filter yet.');
+    await reply(ctx, `🔁 Sending the newest ${count} car(s) of #${filter.id} ${esc(filter.name)} again…`);
+    await checker.sendPending(filter);
+  });
+
   bot.command('check', async (ctx) => {
     if (state.running) return reply(ctx, 'A check is already running. Results will arrive shortly.');
     await reply(ctx, '🔄 Checking OLX now…');
@@ -215,6 +227,7 @@ export function createBot(checker) {
       { command: 'pause', description: 'Pause a filter' },
       { command: 'resume', description: 'Resume a filter' },
       { command: 'remove', description: 'Stop tracking a filter' },
+      { command: 'reset', description: 'Send the newest cars again' },
       { command: 'help', description: 'How it works' },
     ])
     .catch((err) => log.warn('setMyCommands failed:', err.message));

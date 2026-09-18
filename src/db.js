@@ -81,6 +81,8 @@ const stmt = {
   pending: db.prepare('SELECT * FROM listings WHERE filter_id = ? AND notified = 0 ORDER BY posted_at DESC'),
   markNotified: db.prepare('UPDATE listings SET notified = ? WHERE ad_id = ? AND filter_id = ?'),
   latest: db.prepare('SELECT * FROM listings WHERE filter_id = ? ORDER BY posted_at DESC LIMIT ?'),
+  resendNewest: db.prepare(`UPDATE listings SET notified = 0 WHERE rowid IN
+    (SELECT rowid FROM listings WHERE filter_id = ? ORDER BY posted_at DESC LIMIT ?)`),
   totals: db.prepare(`SELECT (SELECT COUNT(*) FROM filters WHERE active = 1) AS active_filters,
     (SELECT COUNT(*) FROM listings) AS listings,
     (SELECT COUNT(*) FROM listings WHERE first_seen >= datetime('now', '-1 day') AND notified = 1) AS alerts_24h`),
@@ -108,5 +110,6 @@ export const repo = {
   pending: (filterId) => stmt.pending.all(filterId),
   markNotified: (adId, filterId, status = ALERT.SENT) => stmt.markNotified.run(status, adId, filterId),
   latest: (filterId, n) => stmt.latest.all(filterId, n),
+  resendNewest: (filterId, n) => stmt.resendNewest.run(filterId, n).changes,
   totals: () => stmt.totals.get(),
 };

@@ -89,6 +89,7 @@ You can also add a link with a name:
 | `/pause 1` | Stop alerts for search #1 |
 | `/resume 1` | Start alerts again for search #1 |
 | `/remove 1` | Delete search #1 |
+| `/reset 1 5` | Send the 5 newest cars of search #1 again (for testing) |
 | `/status` | See if the bot is working well |
 | `/help` | Show help |
 

@@ -22,6 +22,30 @@ export function backoffMinutes() {
 }
 
 export function createChecker(notifier) {
+  async function sendPending(filter) {
+    const pending = repo.pending(filter.id);
+    const toSend = pending.slice(0, config.maxAlertsPerRun);
+    let sent = 0;
+    for (const l of toSend) {
+      try {
+        await notifier.sendListing(filter.chat_id, l, filter);
+        repo.markNotified(l.ad_id, filter.id);
+        sent++;
+      } catch (err) {
+        log.error(`Alert failed for ad ${l.ad_id} (filter #${filter.id}), will retry next run: ${err.message}`);
+        break;
+      }
+    }
+    const overflow = pending.slice(config.maxAlertsPerRun);
+    if (overflow.length && sent === toSend.length) {
+      for (const l of overflow) repo.markNotified(l.ad_id, filter.id, ALERT.SILENT);
+      await notifier.sendText(
+        filter.chat_id,
+        `…and <b>${overflow.length} more</b> new cars for #${filter.id} ${esc(filter.name)}. See /latest ${filter.id} 20`
+      );
+    }
+  }
+
   async function checkFilter(filter) {
     const raw = await fetchListings(filter.api_query, filter.olx_url);
     const listings = raw.map(parseItem).filter(Boolean).filter((l) => matchesScope(l, filter));
@@ -44,27 +68,7 @@ export function createChecker(notifier) {
     repo.insertListings(filter.id, fresh, ALERT.PENDING);
     repo.recordSuccess(filter.id, listings.length);
 
-    const pending = repo.pending(filter.id);
-    const toSend = pending.slice(0, config.maxAlertsPerRun);
-    let sent = 0;
-    for (const l of toSend) {
-      try {
-        await notifier.sendListing(filter.chat_id, l, filter);
-        repo.markNotified(l.ad_id, filter.id);
-        sent++;
-      } catch (err) {
-        log.error(`Alert failed for ad ${l.ad_id} (filter #${filter.id}), will retry next run: ${err.message}`);
-        break;
-      }
-    }
-    const overflow = pending.slice(config.maxAlertsPerRun);
-    if (overflow.length && sent === toSend.length) {
-      for (const l of overflow) repo.markNotified(l.ad_id, filter.id, ALERT.SILENT);
-      await notifier.sendText(
-        filter.chat_id,
-        `…and <b>${overflow.length} more</b> new cars for #${filter.id} ${esc(filter.name)}. See /latest ${filter.id} 20`
-      );
-    }
+    await sendPending(filter);
 
     if (listings.length === 0 && filter.empty_count + 1 === EMPTY_WARN_AT) {
       await notifier.sendText(
@@ -134,7 +138,7 @@ export function createChecker(notifier) {
     return summary;
   }
 
-  return { runCycle, checkFilter };
+  return { runCycle, checkFilter, sendPending };
 }
 
 export function startScheduler(runCycle) {

@@ -60,6 +60,8 @@ In the commands below, change `1` to your search number.
 | `/pause 1` | Stop alerts for search #1 for now |
 | `/resume 1` | Start alerts again for search #1 |
 | `/remove 1` | Delete search #1 |
+| `/reset 1` | Send the 5 newest cars of search #1 again (good for testing) |
+| `/reset 1 10` | Send the 10 newest cars again (max 15) |
 | `/status` | See if the bot is working |
 | `/help` | Show help |
 
@@ -90,6 +92,7 @@ You can also tap the **menu button (/)** next to the message box to see all comm
 
 **I added a link but got no car messages.**
 That is normal. Cars already on OLX are not sent. Wait for new ads, or type `/latest 1` to see the cars the bot found.
+To see what an alert looks like, type `/reset 1`.
 
 **The bot says "That is not an OLX search link".**
 Copy the link from a **search results page** on olx.in (a list of cars), not a single ad.
