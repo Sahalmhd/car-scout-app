@@ -24,25 +24,14 @@ export function backoffMinutes() {
 export function createChecker(notifier) {
   async function sendPending(filter) {
     const pending = repo.pending(filter.id);
-    const toSend = pending.slice(0, config.maxAlertsPerRun);
-    let sent = 0;
-    for (const l of toSend) {
+    for (const l of pending) {
       try {
         await notifier.sendListing(filter.chat_id, l, filter);
         repo.markNotified(l.ad_id, filter.id);
-        sent++;
       } catch (err) {
         log.error(`Alert failed for ad ${l.ad_id} (filter #${filter.id}), will retry next run: ${err.message}`);
         break;
       }
-    }
-    const overflow = pending.slice(config.maxAlertsPerRun);
-    if (overflow.length && sent === toSend.length) {
-      for (const l of overflow) repo.markNotified(l.ad_id, filter.id, ALERT.SILENT);
-      await notifier.sendText(
-        filter.chat_id,
-        `…and <b>${overflow.length} more</b> new cars for #${filter.id} ${esc(filter.name)}. See /latest ${filter.id} 20`
-      );
     }
   }
 
@@ -53,16 +42,16 @@ export function createChecker(notifier) {
     const fresh = listings.filter((l) => !known.has(l.adId));
 
     if (!filter.initialized) {
-      repo.insertListings(filter.id, fresh, ALERT.SILENT);
+      repo.insertListings(filter.id, fresh, ALERT.PENDING);
       repo.markInitialized(filter.id);
       repo.recordSuccess(filter.id, listings.length);
       await notifier.sendText(
         filter.chat_id,
         `✅ <b>Tracking started · #${filter.id} ${esc(filter.name)}</b>\n` +
-          `${listings.length} cars currently match. You'll get an alert for every new one.\n` +
-          `See the latest with /latest ${filter.id}`
+          `${listings.length} cars currently match. Sending the latest ones now...`
       );
-      return 0;
+      await sendPending(filter);
+      return fresh.length;
     }
 
     repo.insertListings(filter.id, fresh, ALERT.PENDING);

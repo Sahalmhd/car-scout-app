@@ -163,6 +163,18 @@ export function createBot(checker) {
     });
   }
 
+  bot.command('stop', (ctx) => {
+    const filters = repo.listFilters(ctx.chat.id);
+    let count = 0;
+    for (const f of filters) {
+      if (f.active) {
+        repo.setActive(f.id, ctx.chat.id, false);
+        count++;
+      }
+    }
+    return reply(ctx, `⏹ Paused ${count} active filter(s). Notifications are stopped. Use /list to see them or /resume &lt;id&gt; to restart.`);
+  });
+
   bot.command('remove', (ctx) => {
     const filter = repo.getFilter(idArg(ctx), ctx.chat.id);
     if (!filter) return reply(ctx, 'Send: /remove &lt;id&gt;. See ids with /list');
@@ -226,6 +238,7 @@ export function createBot(checker) {
       { command: 'scope', description: 'City only or include nearby' },
       { command: 'pause', description: 'Pause a filter' },
       { command: 'resume', description: 'Resume a filter' },
+      { command: 'stop', description: 'Stop all notifications' },
       { command: 'remove', description: 'Stop tracking a filter' },
       { command: 'reset', description: 'Send the newest cars again' },
       { command: 'help', description: 'How it works' },
