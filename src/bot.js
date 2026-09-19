@@ -77,12 +77,10 @@ export function createBot(checker) {
       `➕ Added <b>#${id} ${esc(filter.name)}</b>\n` +
         `Only cars in ${esc(parsed.locationName)} are included. Use /scope ${id} nearby to include nearby districts too.`
     );
-    try {
-      await checker.checkFilter(filter);
-    } catch (err) {
+    checker.checkFilter(filter).catch((err) => {
       repo.recordFailure(id, err.message);
-      await reply(ctx, `First check failed (${esc(err.message)}). It will retry automatically on the next run.`);
-    }
+      reply(ctx, `First check failed (${esc(err.message)}). It will retry automatically on the next run.`);
+    });
   }
 
   bot.command(['start', 'help'], (ctx) => reply(ctx, HELP));
@@ -198,17 +196,18 @@ export function createBot(checker) {
     const count = repo.resendNewest(filter.id, n);
     if (!count) return reply(ctx, 'No cars saved for this filter yet.');
     await reply(ctx, `🔁 Sending the newest ${count} car(s) of #${filter.id} ${esc(filter.name)} again…`);
-    await checker.sendPending(filter);
+    checker.sendPending(filter).catch(err => log.error('Reset send pending failed:', err.message));
   });
 
   bot.command('check', async (ctx) => {
     if (state.running) return reply(ctx, 'A check is already running. Results will arrive shortly.');
     await reply(ctx, '🔄 Checking OLX now…');
-    const s = await checker.runCycle();
-    if (s.skipped) return;
-    return reply(ctx, s.blocked
-      ? '🚫 OLX blocked the request. Checks are backing off for a while.'
-      : `Done. ${s.checked} filter(s) checked, ${s.newCars} new car(s)${s.failed ? `, ${s.failed} failed` : ''}.`);
+    checker.runCycle().then((s) => {
+      if (s.skipped) return;
+      return reply(ctx, s.blocked
+        ? '🚫 OLX blocked the request. Checks are backing off for a while.'
+        : `Done. ${s.checked} filter(s) checked, ${s.newCars} new car(s)${s.failed ? `, ${s.failed} failed` : ''}.`);
+    }).catch(err => log.error('Manual check cycle failed:', err.message));
   });
 
   bot.command('status', (ctx) => {
