@@ -19,6 +19,7 @@ const HELP = `<b>OLX Car Alerts</b>
 /latest &lt;id&gt; [n] – last cars found
 /scope &lt;id&gt; city|nearby – only the chosen city, or nearby districts too
 /pause &lt;id&gt; · /resume &lt;id&gt;
+/stop – pause all notifications
 /remove &lt;id&gt; – stop tracking
 /reset &lt;id&gt; [n] – send the newest n cars again (test alerts)
 /check – check OLX right now

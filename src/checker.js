@@ -25,6 +25,10 @@ export function createChecker(notifier) {
   async function sendPending(filter) {
     const pending = repo.pending(filter.id);
     for (const l of pending) {
+      // Stop if the user paused or deleted the filter during this loop
+      const currentFilter = repo.getFilter(filter.id, filter.chat_id);
+      if (!currentFilter || !currentFilter.active) break;
+      
       try {
         await notifier.sendListing(filter.chat_id, l, filter);
         repo.markNotified(l.ad_id, filter.id);
