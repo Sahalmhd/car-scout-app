@@ -86,6 +86,9 @@ You can also add a link with a name:
 | `/check` | Check OLX right now |
 | `/scope 1 nearby` | Also show cars from nearby districts |
 | `/scope 1 city` | Show cars from the chosen city only |
+| `/seller 1 individual` | Only alert for Individual sellers (no dealers) |
+| `/seller 1 dealer` | Only alert for Dealers |
+| `/seller 1 all` | Alert for both Individuals and Dealers (default) |
 | `/pause 1` | Stop alerts for search #1 |
 | `/resume 1` | Start alerts again for search #1 |
 | `/remove 1` | Delete search #1 |

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS filters (
   location_id   TEXT,
   location_name TEXT,
   scope         TEXT NOT NULL DEFAULT 'city',
+  seller_filter TEXT NOT NULL DEFAULT 'all',
   chat_id       TEXT NOT NULL,
   active        INTEGER NOT NULL DEFAULT 1,
   initialized   INTEGER NOT NULL DEFAULT 0,
@@ -54,6 +55,10 @@ CREATE TABLE IF NOT EXISTS listings (
 CREATE INDEX IF NOT EXISTS idx_listings_filter_seen ON listings (filter_id, first_seen DESC);
 `);
 
+try {
+  db.exec("ALTER TABLE filters ADD COLUMN seller_filter TEXT NOT NULL DEFAULT 'all'");
+} catch {}
+
 export const ALERT = { PENDING: 0, SENT: 1, SILENT: 2 };
 
 const stmt = {
@@ -66,6 +71,7 @@ const stmt = {
   activeFilters: db.prepare('SELECT * FROM filters WHERE active = 1 ORDER BY id'),
   setActive: db.prepare('UPDATE filters SET active = ?, fail_count = 0 WHERE id = ? AND chat_id = ?'),
   setScope: db.prepare('UPDATE filters SET scope = ?, initialized = 0 WHERE id = ? AND chat_id = ?'),
+  setSellerFilter: db.prepare('UPDATE filters SET seller_filter = ? WHERE id = ? AND chat_id = ?'),
   deleteFilter: db.prepare('DELETE FROM filters WHERE id = ? AND chat_id = ?'),
   markInitialized: db.prepare('UPDATE filters SET initialized = 1 WHERE id = ?'),
   recordSuccess: db.prepare(`UPDATE filters SET fail_count = 0, last_error = NULL, last_checked = datetime('now'),
@@ -96,6 +102,7 @@ export const repo = {
   activeFilters: () => stmt.activeFilters.all(),
   setActive: (id, chatId, active) => stmt.setActive.run(active ? 1 : 0, id, String(chatId)).changes > 0,
   setScope: (id, chatId, scope) => stmt.setScope.run(scope, id, String(chatId)).changes > 0,
+  setSellerFilter: (id, chatId, sellerFilter) => stmt.setSellerFilter.run(sellerFilter, id, String(chatId)).changes > 0,
   deleteFilter: (id, chatId) => stmt.deleteFilter.run(id, String(chatId)).changes > 0,
   markInitialized: (id) => stmt.markInitialized.run(id),
   recordSuccess: (id, count) => stmt.recordSuccess.run({ id, count }),

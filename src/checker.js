@@ -1,6 +1,6 @@
 import { config } from './config.js';
 import { repo, ALERT } from './db.js';
-import { fetchListings, parseItem, matchesScope, BlockedError } from './olx.js';
+import { fetchListings, parseItem, matchesScope, matchesSeller, BlockedError } from './olx.js';
 import { esc } from './notifier.js';
 import { log, sleep, randomBetween } from './log.js';
 
@@ -28,6 +28,10 @@ export function createChecker(notifier) {
       // Stop if the user paused or deleted the filter during this loop
       const currentFilter = repo.getFilter(filter.id, filter.chat_id);
       if (!currentFilter || !currentFilter.active) break;
+      if (!matchesSeller(l, currentFilter)) {
+        repo.markNotified(l.ad_id, filter.id, ALERT.SILENT);
+        continue;
+      }
       
       try {
         await notifier.sendListing(filter.chat_id, l, filter);
@@ -41,7 +45,10 @@ export function createChecker(notifier) {
 
   async function checkFilter(filter) {
     const raw = await fetchListings(filter.api_query, filter.olx_url);
-    const listings = raw.map(parseItem).filter(Boolean).filter((l) => matchesScope(l, filter));
+    const listings = raw
+      .map(parseItem)
+      .filter(Boolean)
+      .filter((l) => matchesScope(l, filter) && matchesSeller(l, filter));
     const known = repo.knownIds(filter.id);
     const fresh = listings.filter((l) => !known.has(l.adId));
 

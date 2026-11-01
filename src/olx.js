@@ -158,6 +158,15 @@ export function matchesScope(listing, filter) {
   return listing.locationIds.includes(filter.location_id);
 }
 
+export function matchesSeller(listing, filter) {
+  const sf = filter.seller_filter || 'all';
+  if (sf === 'all') return true;
+  const isDealer = Boolean(listing.isDealer ?? listing.is_dealer);
+  if (sf === 'individual') return !isDealer;
+  if (sf === 'dealer') return isDealer;
+  return true;
+}
+
 function titleCase(s) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }

@@ -18,6 +18,7 @@ const HELP = `<b>OLX Car Alerts</b>
 /list – your filters
 /latest &lt;id&gt; [n] – last cars found
 /scope &lt;id&gt; city|nearby – only the chosen city, or nearby districts too
+/seller &lt;id&gt; individual|dealer|all – filter by seller type
 /pause &lt;id&gt; · /resume &lt;id&gt;
 /stop – pause all notifications
 /remove &lt;id&gt; – stop tracking
@@ -124,7 +125,8 @@ export function createBot(checker) {
       const icon = !f.active ? '⏸' : f.fail_count >= 3 ? '⚠️' : '✅';
       const checked = f.last_checked ? `checked ${timeAgo(f.last_checked.replace(' ', 'T') + 'Z')}` : 'not checked yet';
       const where = f.scope === 'city' ? f.location_name : `${f.location_name} + nearby`;
-      return `${icon} <b>#${f.id} ${esc(f.name)}</b>\n    ${esc(where)} · ${f.last_count ?? '–'} matching now · ${checked}\n    <a href="${esc(f.olx_url)}">open on OLX</a>`;
+      const seller = f.seller_filter === 'individual' ? ' · 👤 Individual only' : f.seller_filter === 'dealer' ? ' · 👤 Dealer only' : '';
+      return `${icon} <b>#${f.id} ${esc(f.name)}</b>\n    ${esc(where)}${seller} · ${f.last_count ?? '–'} matching now · ${checked}\n    <a href="${esc(f.olx_url)}">open on OLX</a>`;
     });
     return reply(ctx, lines.join('\n\n'));
   });
@@ -152,6 +154,21 @@ export function createBot(checker) {
     return reply(ctx, scope === 'city'
       ? `#${idStr} now only alerts for cars in the chosen city.`
       : `#${idStr} now includes nearby districts. Cars already listed there are saved quietly on the next check; only newer ones alert.`);
+  });
+
+  bot.command('seller', (ctx) => {
+    const [idStr, mode] = String(ctx.match ?? '').trim().toLowerCase().split(/\s+/);
+    if (!['all', 'individual', 'dealer'].includes(mode)) {
+      return reply(ctx, 'Send: /seller &lt;id&gt; individual | dealer | all\nExample: <code>/seller 1 individual</code>');
+    }
+    const ok = repo.setSellerFilter(parseInt(idStr, 10), ctx.chat.id, mode);
+    if (!ok) return reply(ctx, 'Filter not found. See /list');
+    const label = mode === 'individual'
+      ? '👤 Individuals only (dealers excluded)'
+      : mode === 'dealer'
+      ? '👤 Dealers only'
+      : '👤 All sellers (Individuals & Dealers)';
+    return reply(ctx, `#${idStr} will now alert for ${label}.`);
   });
 
   for (const [cmd, active] of [['pause', false], ['resume', true]]) {
@@ -236,6 +253,7 @@ export function createBot(checker) {
       { command: 'check', description: 'Check OLX now' },
       { command: 'status', description: 'Checker health' },
       { command: 'scope', description: 'City only or include nearby' },
+      { command: 'seller', description: 'Filter individual vs dealer' },
       { command: 'pause', description: 'Pause a filter' },
       { command: 'resume', description: 'Resume a filter' },
       { command: 'stop', description: 'Stop all notifications' },

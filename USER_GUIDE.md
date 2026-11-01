@@ -57,6 +57,9 @@ In the commands below, change `1` to your search number.
 | `/check` | Check OLX right now |
 | `/scope 1 nearby` | Also show cars from nearby districts |
 | `/scope 1 city` | Show cars from your city only |
+| `/seller 1 individual` | Only alert for Individual sellers (no dealers) |
+| `/seller 1 dealer` | Only alert for Dealers |
+| `/seller 1 all` | Alert for both Individuals and Dealers (default) |
 | `/pause 1` | Stop alerts for search #1 for now |
 | `/resume 1` | Start alerts again for search #1 |
 | `/remove 1` | Delete search #1 |
